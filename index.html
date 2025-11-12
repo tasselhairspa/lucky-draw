@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lucky Draw</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background-color: #000; /* 黑底置中 */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #mainImage {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain; /* ? 保持比例，不裁圖 */
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 0.8s ease-in-out;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .fade-out {
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <img id="mainImage" src="P1.jpg" alt="主畫面 P1" />
+
+  <script>
+    const HOME_SRC = "P1.jpg";
+    const img = document.getElementById("mainImage");
+
+    let onHome = true;
+    let animating = false;
+    let lastResult = "";
+
+    function pickWeightedResult() {
+      let result = "";
+      let tries = 0;
+      do {
+        const r = Math.random() * 100;
+        if (r < 5) result = "P3.jpg";
+        else if (r < 15) result = "P2.jpg";
+        else if (r < 30) result = Math.random() < 0.5 ? "P4.jpg" : "P5.jpg";
+        else if (r < 50) result = Math.random() < 0.5 ? "P5.jpg" : "P6.jpg";
+        else {
+          const group = ["P7.jpg", "P8.jpg", "P9.jpg"];
+          result = group[Math.floor(Math.random() * group.length)];
+        }
+        tries++;
+        if (tries > 10) break;
+      } while (result === lastResult);
+      lastResult = result;
+      return result;
+    }
+
+    function fadeSwap(toSrc) {
+      if (animating) return;
+      animating = true;
+
+      img.classList.add("fade-out");
+      setTimeout(() => {
+        const onLoad = () => {
+          img.removeEventListener("load", onLoad);
+          requestAnimationFrame(() => {
+            img.classList.remove("fade-out");
+            setTimeout(() => (animating = false), 820);
+          });
+        };
+        img.addEventListener("load", onLoad);
+        img.src = toSrc;
+      }, 800);
+    }
+
+    document.body.addEventListener("click", () => {
+      if (animating) return;
+
+      if (onHome) {
+        fadeSwap(pickWeightedResult());
+        onHome = false;
+      } else {
+        fadeSwap(HOME_SRC);
+        onHome = true;
+      }
+    });
+  </script>
+</body>
+</html>
