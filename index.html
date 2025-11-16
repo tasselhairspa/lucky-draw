@@ -5,22 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lucky Draw</title>
   <style>
+    /* 版面：置中顯示，保持圖片原始比例 */
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       width: 100%;
       overflow: hidden;
-      background-color: #000; /* �©��m�� */
+      background-color: #000;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
     }
 
     #mainImage {
       max-width: 100%;
       max-height: 100%;
-      object-fit: contain; /* ? �O����ҡA������ */
+      object-fit: contain;      /* 依圖片尺寸比例顯示 */
       cursor: pointer;
       opacity: 1;
       transition: opacity 0.8s ease-in-out;
@@ -31,40 +32,74 @@
     .fade-out {
       opacity: 0;
     }
+
+    /* Loading 遮罩 */
+    #loader {
+      position: fixed;
+      inset: 0;
+      display: none;            /* 預設隱藏 */
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 10;
+    }
+
+    #loader.show {
+      display: flex;
+    }
+
+    #loader img {
+      max-width: 240px;         /* 可依需要調整大小 */
+      max-height: 240px;
+    }
   </style>
 </head>
 <body>
-  <img id="mainImage" src="P1.jpg" alt="�D�e�� P1" />
+  <img id="mainImage" src="P1.jpg" alt="主畫面 P1" />
+
+  <!-- 自訂 GIF Loading，檔名 loader.gif -->
+  <div id="loader" aria-hidden="true">
+    <img src="loader.gif" alt="Loading..." />
+  </div>
 
   <script>
     const HOME_SRC = "P1.jpg";
     const img = document.getElementById("mainImage");
+    const loader = document.getElementById("loader");
 
-    let onHome = true;
-    let animating = false;
-    let lastResult = "";
+    let onHome = true;       // 是否在主畫面
+    let animating = false;   // 是否過場中
+    let lastResult = "";     // 上一次結果（防重覆）
 
+    // 機率分布
     function pickWeightedResult() {
       let result = "";
       let tries = 0;
       do {
         const r = Math.random() * 100;
-        if (r < 5) result = "P3.jpg";
-        else if (r < 15) result = "P2.jpg";
-        else if (r < 30) result = Math.random() < 0.5 ? "P4.jpg" : "P5.jpg";
-        else if (r < 50) result = Math.random() < 0.5 ? "P5.jpg" : "P6.jpg";
-        else {
-          const group = ["P7.jpg", "P8.jpg", "P9.jpg"];
+        if (r < 5) {
+          result = "P3.jpg";                       // 5%
+        } else if (r < 15) {
+          result = "P2.jpg";                       // 10%
+        } else if (r < 30) {
+          result = Math.random() < 0.5 ? "P4.jpg" : "P5.jpg"; // 15%
+        } else if (r < 50) {
+          result = Math.random() < 0.5 ? "P5.jpg" : "P6.jpg"; // 20%
+        } else {
+          const group = ["P7.jpg", "P8.jpg", "P9.jpg"];       // 50%
           result = group[Math.floor(Math.random() * group.length)];
         }
         tries++;
-        if (tries > 10) break;
+        if (tries > 10) break; // 安全保險
       } while (result === lastResult);
       lastResult = result;
       return result;
     }
 
-    function fadeSwap(toSrc) {
+    const showLoader = () => loader.classList.add("show");
+    const hideLoader = () => loader.classList.remove("show");
+
+    function fadeSwap(toSrc, onDone) {
       if (animating) return;
       animating = true;
 
@@ -74,7 +109,10 @@
           img.removeEventListener("load", onLoad);
           requestAnimationFrame(() => {
             img.classList.remove("fade-out");
-            setTimeout(() => (animating = false), 820);
+            setTimeout(() => {
+              animating = false;
+              if (typeof onDone === "function") onDone();
+            }, 820);
           });
         };
         img.addEventListener("load", onLoad);
@@ -86,9 +124,13 @@
       if (animating) return;
 
       if (onHome) {
-        fadeSwap(pickWeightedResult());
+        // 由 P1 進入抽獎 → 顯示 GIF loading
+        showLoader();
+        const target = pickWeightedResult();
+        fadeSwap(target, hideLoader);  // 圖片載完＋淡入完先收起 loader
         onHome = false;
       } else {
+        // 結果頁 → 回 P1（唔顯示 loader，如要也顯示可自行加上 showLoader/hideLoader）
         fadeSwap(HOME_SRC);
         onHome = true;
       }
